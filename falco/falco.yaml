@@ -269,8 +269,8 @@ data:
     the program will be closed and reopened if falco is signaled with\n# SIGUSR1.\nprogram_output:\n
     \ enabled: false\n  keep_alive: false\n  program: |\n    mail -s \"Falco Notification\"
     someone@example.com\n\nhttp_output:\n  enabled: false\n  url: http://some.url\n\ngrpc:\n
-    \ enabled: false\n  threadiness: 0\n  bind_address: \"unix:///var/run/falco/falco.sock\"\n
-    \ \n\ngrpc_output:\n  enabled: false"
+    \ enabled: true\n  threadiness: 8\n  bind_address: \"unix:///var/run/falco/falco.sock\"\n
+    \ \n\ngrpc_output:\n  enabled: true"
   falco_rules.local.yaml: |
     #
     # Copyright (C) 2019 The Falco Authors.
