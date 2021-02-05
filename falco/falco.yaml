@@ -189,88 +189,182 @@ data:
     #   condition: proc.name in (http_server_binaries) and inbound and fd.sport != 80 and fd.sport != 443
     #   output: "Inbound network traffic to HTTP Server on unexpected port (connection=%fd.name)"
     #   priority: WARNING
-  falco.yaml: "# File(s) or Directories containing Falco rules, loaded at startup.\n#
-    The name \"rules_file\" is only for backwards compatibility.\n# If the entry is
-    a file, it will be read directly. If the entry is a directory,\n# every file in
-    that directory will be read, in alphabetical order.\n#\n# falco_rules.yaml ships
-    with the falco package and is overridden with\n# every new software version. falco_rules.local.yaml
-    is only created\n# if it doesn't exist. If you want to customize the set of rules,
-    add\n# your customizations to falco_rules.local.yaml.\n#\n# The files will be
-    read in the order presented here, so make sure if\n# you have overrides they appear
-    in later files.\nrules_file:\n  - /etc/falco/falco_rules.yaml\n  - /etc/falco/falco_rules.local.yaml\n
-    \ - /etc/falco/k8s_audit_rules.yaml\n  - /etc/falco/rules.d\n\n# If true, the
-    times displayed in log messages and output messages\n# will be in ISO 8601. By
-    default, times are displayed in the local\n# time zone, as governed by /etc/localtime.\ntime_format_iso_8601:
-    false\n\n# Whether to output events in json or text\njson_output: false\n\n# When
-    using json output, whether or not to include the \"output\" property\n# itself
-    (e.g. \"File below a known binary directory opened for writing\n# (user=root ....\")
-    in the json output.\njson_include_output_property: true\n\n# Send information
-    logs to stderr and/or syslog Note these are *not* security\n# notification logs!
-    These are just Falco lifecycle (and possibly error) logs.\nlog_stderr: true\nlog_syslog:
-    true\n\n# Minimum log level to include in logs. Note: these levels are\n# separate
-    from the priority field of rules. This refers only to the\n# log level of falco's
-    internal logging. Can be one of \"emergency\",\n# \"alert\", \"critical\", \"error\",
-    \"warning\", \"notice\", \"info\", \"debug\".\nlog_level: info\n\n# Minimum rule
-    priority level to load and run. All rules having a\n# priority more severe than
-    this level will be loaded/run.  Can be one\n# of \"emergency\", \"alert\", \"critical\",
-    \"error\", \"warning\", \"notice\",\n# \"info\", \"debug\".\npriority: debug\n\n#
-    Whether or not output to any of the output channels below is\n# buffered. Defaults
-    to false\nbuffered_outputs: false\n\n# Falco uses a shared buffer between the
-    kernel and userspace to pass\n# system call information. When falco detects that
-    this buffer is\n# full and system calls have been dropped, it can take one or
-    more of\n# the following actions:\n#   - \"ignore\": do nothing. If an empty list
-    is provided, ignore is assumed.\n#   - \"log\": log a CRITICAL message noting
-    that the buffer was full.\n#   - \"alert\": emit a falco alert noting that the
-    buffer was full.\n#   - \"exit\": exit falco with a non-zero rc.\n#\n# The rate
-    at which log/alert messages are emitted is governed by a\n# token bucket. The
-    rate corresponds to one message every 30 seconds\n# with a burst of 10 messages.\nsyscall_event_drops:\n
-    \ actions:\n    - log\n    - alert\n  rate: 0.03333\n  max_burst: 10\n\n# Falco
-    continuously monitors outputs performance. When an output channel does not allow\n#
-    to deliver an alert within a given deadline, an error is reported indicating\n#
-    which output is blocking notifications.\n# The timeout error will be reported
-    to the log according to the above log_* settings.\n# Note that the notification
-    will not be discarded from the output queue; thus,\n# output channels may indefinitely
-    remain blocked.\n# An output timeout error indeed indicate a misconfiguration
-    issue or I/O problems\n# that cannot be recovered by Falco and should be fixed
-    by the user.\n#\n# The \"output_timeout\" value specifies the duration in milliseconds
-    to wait before\n# considering the deadline exceed.\n#\n# With a 2000ms default,
-    the notification consumer can block the Falco output\n# for up to 2 seconds without
-    reaching the timeout.\n\noutput_timeout: 2000\n\n# A throttling mechanism implemented
-    as a token bucket limits the\n# rate of falco notifications. This throttling is
-    controlled by the following configuration\n# options:\n#  - rate: the number of
-    tokens (i.e. right to send a notification)\n#    gained per second. Defaults to
-    1.\n#  - max_burst: the maximum number of tokens outstanding. Defaults to 1000.\n#\n#
-    With these defaults, falco could send up to 1000 notifications after\n# an initial
-    quiet period, and then up to 1 notification per second\n# afterward. It would
-    gain the full burst back after 1000 seconds of\n# no activity.\noutputs:\n  rate:
-    1\n  max_burst: 1000\n\n# Where security notifications should go.\n# Multiple
-    outputs can be enabled.\n\nsyslog_output:\n  enabled: true\n\n# If keep_alive
-    is set to true, the file will be opened once and\n# continuously written to, with
-    each output message on its own\n# line. If keep_alive is set to false, the file
-    will be re-opened\n# for each output message.\n#\n# Also, the file will be closed
-    and reopened if falco is signaled with\n# SIGUSR1.\n\nfile_output:\n  enabled:
-    false\n  keep_alive: false\n  filename: ./events.txt\n\nstdout_output:\n  enabled:
-    true\n\n# Falco contains an embedded webserver that can be used to accept K8s\n#
-    Audit Events. These config options control the behavior of that\n# webserver.
-    (By default, the webserver is disabled).\n#\n# The ssl_certificate is a combination
-    SSL Certificate and corresponding\n# key contained in a single file. You can generate
-    a key/cert as follows:\n#\n# $ openssl req -newkey rsa:2048 -nodes -keyout key.pem
-    -x509 -days 365 -out certificate.pem\n# $ cat certificate.pem key.pem > falco.pem\n#
-    $ sudo cp falco.pem /etc/falco/falco.pem\n\nwebserver:\n  enabled: true\n  listen_port:
-    8765\n  k8s_audit_endpoint: /k8s-audit\n  ssl_enabled: false\n  ssl_certificate:
-    /etc/falco/certs/server.pem\n\n# Possible additional things you might want to
-    do with program output:\n#   - send to a slack webhook:\n#         program: \"\\\"jq
-    '{text: .output}' | curl -d @- -X POST https://hooks.slack.com/services/XXX\\\"\"\n#
-    \  - logging (alternate method than syslog):\n#         program: logger -t falco-test\n#
-    \  - send over a network connection:\n#         program: nc host.example.com 80\n\n#
-    If keep_alive is set to true, the program will be started once and\n# continuously
-    written to, with each output message on its own\n# line. If keep_alive is set
-    to false, the program will be re-spawned\n# for each output message.\n#\n# Also,
-    the program will be closed and reopened if falco is signaled with\n# SIGUSR1.\nprogram_output:\n
-    \ enabled: false\n  keep_alive: false\n  program: |\n    mail -s \"Falco Notification\"
-    someone@example.com\n\nhttp_output:\n  enabled: false\n  url: http://some.url\n\ngrpc:\n
-    \ enabled: true\n  threadiness: 8\n  bind_address: \"unix:///var/run/falco/falco.sock\"\n
-    \ \n\ngrpc_output:\n  enabled: true"
+  falco.yaml: |
+    # File(s) or Directories containing Falco rules, loaded at startup.
+    # The name \"rules_file\" is only for backwards compatibility.
+    # If the entry is a file, it will be read directly. If the entry is a directory,
+    # every file in that directory will be read, in alphabetical order.
+    #
+    # falco_rules.yaml ships with the falco package and is overridden with
+    # every new software version. falco_rules.local.yaml is only created
+    # if it doesn't exist. If you want to customize the set of rules, add
+    # your customizations to falco_rules.local.yaml.
+    #
+    # The files will be read in the order presented here, so make sure if
+    # you have overrides they appear in later files.
+    rules_file:
+      - /etc/falco/falco_rules.yaml
+      - /etc/falco/falco_rules.local.yaml
+      - /etc/falco/k8s_audit_rules.yaml
+      - /etc/falco/rules.d
+
+    # If true, the times displayed in log messages and output messages
+    # will be in ISO 8601. By default, times are displayed in the local
+    # time zone, as governed by /etc/localtime.
+    time_format_iso_8601: false
+
+    # Whether to output events in json or text
+    json_output: false
+
+    # When using json output, whether or not to include the \"output\" property
+    # itself (e.g. \"File below a known binary directory opened for writing
+    # (user=root ....\") in the json output.
+    json_include_output_property: true
+
+    # Send information logs to stderr and/or syslog Note these are *not* security
+    # notification logs! These are just Falco lifecycle (and possibly error) logs.
+    log_stderr: true
+    log_syslog: true
+
+    # Minimum log level to include in logs. Note: these levels are
+    # separate from the priority field of rules. This refers only to the
+    # log level of falco's internal logging. Can be one of \"emergency\",
+    # \"alert\", \"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\".
+    log_level: info
+
+    # Minimum rule priority level to load and run. All rules having a
+    # priority more severe than this level will be loaded/run.  Can be one
+    # of \"emergency\", \"alert\", \"critical\", \"error\", \"warning\", \"notice\",
+    # \"info\", \"debug\".
+    priority: debug
+
+    # Whether or not output to any of the output channels below is
+    # buffered. Defaults to false
+    buffered_outputs: false
+
+    # Falco uses a shared buffer between the kernel and userspace to pass
+    # system call information. When falco detects that this buffer is
+    # full and system calls have been dropped, it can take one or more of
+    # the following actions:
+    #   - \"ignore\": do nothing. If an empty list is provided, ignore is assumed.
+    #   - \"log\": log a CRITICAL message noting that the buffer was full.
+    #   - \"alert\": emit a falco alert noting that the buffer was full.
+    #   - \"exit\": exit falco with a non-zero rc.
+    #
+    # The rate at which log/alert messages are emitted is governed by a
+    # token bucket. The rate corresponds to one message every 30 seconds
+    # with a burst of 10 messages.
+    syscall_event_drops:
+      actions:
+        - log
+        - alert
+      rate: 0.03333
+      max_burst: 10
+
+    # Falco continuously monitors outputs performance. When an output channel does not allow
+    # to deliver an alert within a given deadline, an error is reported indicating
+    # which output is blocking notifications.
+    # The timeout error will be reported to the log according to the above log_* settings.
+    # Note that the notification will not be discarded from the output queue; thus,
+    # output channels may indefinitely remain blocked.
+    # An output timeout error indeed indicate a misconfiguration issue or I/O problems
+    # that cannot be recovered by Falco and should be fixed by the user.
+    #
+    # The \"output_timeout\" value specifies the duration in milliseconds to wait before
+    # considering the deadline exceed.
+    #
+    # With a 2000ms default, the notification consumer can block the Falco output
+    # for up to 2 seconds without reaching the timeout.
+
+    output_timeout: 2000
+
+    # A throttling mechanism implemented as a token bucket limits the
+    # rate of falco notifications. This throttling is controlled by the following configuration
+    # options:
+    #  - rate: the number of tokens (i.e. right to send a notification)
+    #    gained per second. Defaults to 1.
+    #  - max_burst: the maximum number of tokens outstanding. Defaults to 1000.
+    #
+    # With these defaults, falco could send up to 1000 notifications after
+    # an initial quiet period, and then up to 1 notification per second
+    # afterward. It would gain the full burst back after 1000 seconds of
+    # no activity.
+    outputs:
+      rate: 1
+      max_burst: 1000
+
+    # Where security notifications should go.
+    # Multiple outputs can be enabled.
+
+    syslog_output:
+      enabled: true
+
+    # If keep_alive is set to true, the file will be opened once and
+    # continuously written to, with each output message on its own
+    # line. If keep_alive is set to false, the file will be re-opened
+    # for each output message.
+    #
+    # Also, the file will be closed and reopened if falco is signaled with
+    # SIGUSR1.
+
+    file_output:
+      enabled: false
+      keep_alive: false
+      filename: ./events.txt
+
+    stdout_output:
+      enabled: true
+
+    # Falco contains an embedded webserver that can be used to accept K8s
+    # Audit Events. These config options control the behavior of that
+    # webserver. (By default, the webserver is disabled).
+    #
+    # The ssl_certificate is a combination SSL Certificate and corresponding
+    # key contained in a single file. You can generate a key/cert as follows:
+    #
+    # $ openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
+    # $ cat certificate.pem key.pem > falco.pem
+    # $ sudo cp falco.pem /etc/falco/falco.pem
+
+    webserver:
+      enabled: true
+      listen_port: 8765
+      k8s_audit_endpoint: /k8s-audit
+      ssl_enabled: false
+      ssl_certificate: /etc/falco/certs/server.pem
+
+    # Possible additional things you might want to do with program output:
+    #   - send to a slack webhook:
+    #         program: \"\\\"jq '{text: .output}' | curl -d @- -X POST https://hooks.slack.com/services/XXX\\\"\"
+    #   - logging (alternate method than syslog):
+    #         program: logger -t falco-test
+    #   - send over a network connection:
+    #         program: nc host.example.com 80
+
+    # If keep_alive is set to true, the program will be started once and
+    # continuously written to, with each output message on its own
+    # line. If keep_alive is set to false, the program will be re-spawned
+    # for each output message.
+    #
+    # Also, the program will be closed and reopened if falco is signaled with
+    # SIGUSR1.
+    program_output:
+      enabled: false
+      keep_alive: false
+      program: |
+        mail -s \"Falco Notification\"    someone@example.com
+
+    http_output:
+      enabled: false
+      url: http://some.url
+
+    grpc:
+      enabled: true
+      threadiness: 8
+      bind_address: \"unix:///var/run/falco/falco.sock\"
+
+    grpc_output:
+      enabled: true
   falco_rules.local.yaml: |
     #
     # Copyright (C) 2019 The Falco Authors.
